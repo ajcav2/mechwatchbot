@@ -169,9 +169,14 @@ def analyze_submission(submission):
 
 
 if __name__ == "__main__":
-    inbox_monitor_proc = Process(target=inbox_monitor)
-    inbox_monitor_proc.start()
+    while True:
+        try:
+            inbox_monitor_proc = Process(target=inbox_monitor)
+            inbox_monitor_proc.start()
 
-    for submission in reddit.subreddit("mechmarket").stream.submissions(skip_existing=True):
-        subreddit_watch_proc = Process(target=analyze_submission, args=(submission, ))
-        subreddit_watch_proc.start()
+            for submission in reddit.subreddit("mechmarket").stream.submissions(skip_existing=True):
+                subreddit_watch_proc = Process(target=analyze_submission, args=(submission, ))
+                subreddit_watch_proc.start()
+                
+        except Exception as e:
+            print(e)

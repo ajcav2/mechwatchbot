@@ -57,14 +57,14 @@ class RedditUser():
                            it\'ll send you a message with a link to the post. For example, if you\'re \
                            looking for posts where people are selling "GMK alphas", you could send the \
                            bot `/h gmk alphas`. If you\'re looking to follow group buys for acrylic cases, \
-                           send the bot `/ic acrylic case`, or simply just `/ic acrylic`. The available bot commands are as follows:  \n\n'+
-                                                        '`/h <search_term>` // watch the _have_ section  \n\n'+
-                                                        '`/w <search_term>` // watch the _want_ section  \n\n'+
-                                                        '`/v <search_term>` // watch for vendor  \n\n'+
-                                                        '`/gb <search_term>` // watch for group buy  \n\n'+
-                                                        '`/ic <search_term>` // watch for interest check  \n\n'+
-                                                        '`/rm <search_term>` // remove search_term from watch list  \n\n'+
-                                                        '`/va` // view all watch list')
+                           send the bot `/gb acrylic case`, or simply just `/gb acrylic`. The available bot commands are as follows:  \n\n'+
+                                                        '`/h <search_term>` : : watch the _have_ section  \n\n'+
+                                                        '`/w <search_term>` : : watch the _want_ section  \n\n'+
+                                                        '`/v <search_term>` : : watch for vendor  \n\n'+
+                                                        '`/gb <search_term>` : : watch for group buy  \n\n'+
+                                                        '`/ic <search_term>` : : watch for interest check  \n\n'+
+                                                        '`/rm <search_term>` : : remove search_term from watch list  \n\n'+
+                                                        '`/va` : : view all watch list')
 
 
     def alert_author(self, title, submission):
@@ -177,6 +177,6 @@ if __name__ == "__main__":
             for submission in reddit.subreddit("mechmarket").stream.submissions(skip_existing=True):
                 subreddit_watch_proc = Process(target=analyze_submission, args=(submission, ))
                 subreddit_watch_proc.start()
-                
+
         except Exception as e:
             print(e)

@@ -1,185 +1,177 @@
-import praw
-from multiprocessing import Process
-import time
-import threading
-import re
 import copy
+import os
 import pickle
+import re
+import threading
+import time
+from multiprocessing import Process
+
+import pandas as pd
+import praw
 
 reddit = praw.Reddit("mechwatchbot")
 subreddit = reddit.subreddit('mechmarket')
+user_df_pickle = 'userlist.pickle'
 
 trading_regex = re.compile(r'\[h\](?P<have>.*?)\[w\](?P<want>.*)')
 vendor_regex = re.compile(r'\[vendor\](?P<title>.*)')
 groupbuy_regex = re.compile(r'\[gb\](?P<title>.*)')
-
-c = threading.Condition()
-user_dict = {}
+ic_regex = re.compile(r'\[ic\](?P<title>.*)')
 
 class RedditUser():
     def __init__(self, username, message):
         self.username = username
-        self.messages = [message]
-        self.watch_list = {'h': [], 'w': [], 'v': [], 'gb': [], 'ic': []}
+        self.message = message
 
 
     def update_messages(self, message):
-        self.messages.append(message)
-
-
-    def add_to_watchlist(self, message, item_type, item):
-        if item not in self.watch_list[item_type]:
-            self.watch_list[item_type].append(item)
-            self.send_message(f"Added {item} to your watchlist.")
-        else:
-            self.send_message(f"{item.capitalize()} already in watchlist.")
-        self.get_watch_list(message)
+        self.message = message
 
 
     def get_watch_list(self, message):
+        user_df = read_df_pickle(user_df_pickle)
+        this_user = user_df.loc[self.username]
         body = 'Your current watch list for /r/mechmarket is:\n\n'
         item_counter = 1
-        for watch_type, item_list in self.watch_list.items():
-            for item in item_list:
-                body += str(item_counter)+'. ['+watch_type.upper()+'] '+item+'\n\n'
-                item_counter += 1
+        for item in this_user['h']:
+            body += str(item_counter)+'. [H] '+item+'\n\n'
+            item_counter += 1
+        for item in this_user['w']:
+            body += str(item_counter)+'. [W] '+item+'\n\n'
+            item_counter += 1
+        for item in this_user['ic']:
+            body += str(item_counter)+'. [IC] '+item+'\n\n'
+            item_counter += 1
+        for item in this_user['v']:
+            body += str(item_counter)+'. [V] '+item+'\n\n'
+            item_counter += 1
+        for item in this_user['gb']:
+            body += str(item_counter)+'. [GB] '+item+'\n\n'
+            item_counter += 1
         self.send_message(body)
 
-    
+
     def get_help(self, message):
-        self.send_message('This bot searches for strings inside of posts on the mechmarket subreddit. \
-                                                         The available bot commands are as follows:  \n\n'+
-                                                        '`/h <string>` :: watch the _have_ section  \n\n'+
-                                                        '`/w <string>` :: watch the _want_ section  \n\n'+
-                                                        '`/v <string>` :: watch for vendor  \n\n'+
-                                                        '`/gb <string>` :: watch for group buy  \n\n'+
-                                                        '`/ic <string>` :: watch for interest check  \n\n'+
-                                                        '`/rm <string>` :: remove string from watch list  \n\n'+
-                                                        '`/va` :: view all watch list')
+        self.send_message('This bot searches post titles in the /r/mechmarket subreddit.\
+                           When the bot finds a match between your watch list and a post title, \
+                           it\'ll send you a message with a link to the post. For example, if you\'re \
+                           looking for posts where people are selling "GMK alphas", you could send the \
+                           bot `/h gmk alphas`. If you\'re looking to follow group buys for acrylic cases, \
+                           send the bot `/ic acrylic case`, or simply just `/ic acrylic`. The available bot commands are as follows:  \n\n'+
+                                                        '`/h <search_term>` // watch the _have_ section  \n\n'+
+                                                        '`/w <search_term>` // watch the _want_ section  \n\n'+
+                                                        '`/v <search_term>` // watch for vendor  \n\n'+
+                                                        '`/gb <search_term>` // watch for group buy  \n\n'+
+                                                        '`/ic <search_term>` // watch for interest check  \n\n'+
+                                                        '`/rm <search_term>` // remove search_term from watch list  \n\n'+
+                                                        '`/va` // view all watch list')
 
 
-    def alert_author(self, item, submission):
-        self.send_message(f'Your watch notification for {item} has been triggered by {submission.permalink}')
-
-
-    def remove_item(self, message, rm_item):
-        for watch_type, item_list in self.watch_list.items():
-            try:
-                self.watch_list[watch_type].remove(rm_item)
-            except ValueError:
-                pass
-        self.get_watch_list(message)
+    def alert_author(self, title, submission):
+        self.send_message(f'One of your /r/mechmarket alerts has been trigged!\n\n{title}\n\n{submission.permalink}')
 
 
     def send_message(self, body):
-        reddit.inbox.message(self.messages[-1]).reply(body)
+        reddit.inbox.message(self.message).reply(body)
 
 
+def lock_controlled_file(func):
+    def wrap(*args, **kwargs):
+        while os.path.exists(args[0]+'.lock'):
+            time.sleep(1)
+        with open(args[0]+'.lock', 'w+') as f:
+            pass
+        result = func(*args, **kwargs)
+        while os.path.exists(args[0]+'.lock'):
+            os.remove(args[0]+'.lock')
+        return result
+    return wrap
 
-class InboxThread(threading.Thread):
-    def __init__(self, name):
-        threading.Thread.__init__(self)
-        self.name = name
 
-    def run(self):
-        global user_dict
-        user_list_pickle = 'userlist.pickle'
-        
-        for item in reddit.inbox.stream(skip_existing=True):
-            c.acquire()
+@lock_controlled_file
+def read_df_pickle(fp):
+    return pd.read_pickle(fp)
 
-            with open(user_list_pickle, 'rb') as f:
-                user_dict = pickle.load(f)
 
-            message = reddit.inbox.message(item.id)
-            author = message.author.name
-            command = message.body
+@lock_controlled_file
+def write_df_pickle(fp, df):
+    df.to_pickle(fp, protocol=pickle.HIGHEST_PROTOCOL)
 
-            print(f"{author}: {command}")
-            if author not in user_dict:
-                user_dict[author] = RedditUser(author, message)
+
+def alert_interested_users(user_df, user_column, title_text, submission):
+    users = user_df.loc[[any(x in title_text for x in y) for y in user_df[user_column].tolist()]]
+    for index, row in users.iterrows():
+        print(f"Alerting {user_df.loc[index].name} to {submission.title}")
+        user_df.loc[index]['RedditUser'].alert_author(submission.title, submission)
+
+
+def inbox_monitor():
+    for item in reddit.inbox.stream(skip_existing=True):
+        user_df = read_df_pickle(user_df_pickle)
+
+        message = reddit.inbox.message(item.id)
+        author = message.author.name
+        command = message.body
+
+        print(f"{author}: {command}")
+        if author in user_df.index.tolist():
+            user_df.loc[author]['RedditUser'].update_messages(message)
+        else:
+            user_df.loc[author] = [RedditUser(author, message), [], [], [], [], []]
+
+        this_user = user_df.loc[author]['RedditUser']
+        if command.lower().startswith('/help'):
+            this_user.get_help(message)
+        elif command.lower().startswith('/va'):
+            this_user.get_watch_list(message)
+        elif command.lower().startswith('/rm'):
+            rm_item = command[3:].lower().strip()
+            for c in user_df.loc[author]:
+                try:
+                    if rm_item in c:
+                        c.remove(rm_item)
+                        this_user.send_message(f"Removed {rm_item} from watchlist.")
+                except TypeError:
+                    pass
+            write_df_pickle(user_df_pickle, user_df)
+            this_user.get_watch_list(message)
+        elif command[0:3].lower().strip() in ['/h', '/w', '/gb', '/ic', '/v']:
+            new_item = command[3:].lower().strip()
+            watch_type = command[1:3].lower().strip()
+            if new_item not in user_df.loc[author][watch_type]:
+                user_df.loc[author][watch_type].append(new_item)
+                this_user.send_message(f"Got it. Watching for [{watch_type.upper()}] {new_item.title()} in /r/mechmarket!")
             else:
-                user_dict[author].update_messages(message)
+                this_user.send_message(f"{new_item} already in watch list!")
+            write_df_pickle(user_df_pickle, user_df)
+            this_user.get_watch_list(message)
+        else:
+            this_user.get_help(message)
 
 
-            if command.lower().startswith('/help'):
-                user_dict[author].get_help(message)
-            elif command.lower().startswith('/va'):
-                user_dict[author].get_watch_list(message)
-            elif command.lower().startswith('/rm'):
-                rm_item = command[3:].lower().strip()
-                user_dict[author].remove_item(message, rm_item)
-            elif command[0:3].lower().strip() in ['/h', '/w', '/gb', '/ic', '/v']:
-                new_item = command[3:].lower().strip()
-                watch_type = command[1:3].lower().strip()
-                user_dict[author].add_to_watchlist(message, watch_type, new_item)
-            else:
-                user_dict[author].get_help(message)
+def analyze_submission(submission):
+    user_df = read_df_pickle(user_df_pickle)
 
-            with open(user_list_pickle, 'wb') as f:
-                pickle.dump(user_dict, f, protocol=pickle.HIGHEST_PROTOCOL)
-
-            c.notify_all()
-            c.release()
+    title = submission.title.lower()
+    print(f"Searching title: {submission.title}")
+    t = time.time()
+    if trading_regex.search(title):
+        m = trading_regex.search(title)
+        alert_interested_users(user_df, 'w', m.group('want'), submission)
+        alert_interested_users(user_df, 'h', m.group('have'), submission)
+    elif groupbuy_regex.search(title):
+        alert_interested_users(user_df, 'gb', groupbuy_regex.search(title).group('title'), submission)
+    elif vendor_regex.search(title):
+        alert_interested_users(user_df, 'v', vendor_regex.search(title).group('title'), submission)
+    elif ic_regex.search(title):
+        alert_interested_users(user_df, 'ic', ic_regex.search(title).group('title'), submission)
+    print(f"Finished regex search and alerts in {round(time.time()-t, 1)} seconds")
 
 
-class WatchThread(threading.Thread):
-    def __init__(self, name):
-        threading.Thread.__init__(self)
-        self.name = name
+if __name__ == "__main__":
+    inbox_monitor_proc = Process(target=inbox_monitor)
+    inbox_monitor_proc.start()
 
-    def run(self):
-        global user_dict
-
-        for submission in reddit.subreddit("mechmarket").stream.submissions(skip_existing=True):
-            c.acquire()
-            t_user_dict = copy.deepcopy(user_dict)
-            c.notify_all()
-            c.release()
-
-            while len(t_user_dict) == 0:
-                c.acquire()
-                t_user_dict = copy.deepcopy(user_dict)
-                c.notify_all()
-                c.release()
-
-            title = submission.title.lower()
-            print(f"Searching title: {submission.title}")
-            t = time.time()
-            if trading_regex.search(title):
-                m = trading_regex.search(title)
-                have = m.group('have')
-                want = m.group('want')
-                for author in t_user_dict:
-                    for watched_item in t_user_dict[author].watch_list['h']:
-                        if watched_item in have:
-                            print(f"Alerting {author} about {watched_item}")
-                            t_user_dict[author].alert_author(watched_item, submission)
-                    for item_to_be_sold in t_user_dict[author].watch_list['w']:
-                        if item_to_be_sold in want:
-                            print(f"Alerting {author} about {item_to_be_sold}")
-                            t_user_dict[author].alert_author(item_to_be_sold, submission)
-            elif groupbuy_regex.search(title):
-                gb_text = groupbuy_regex.search(title).group('title')
-                for author in t_user_dict:
-                    for groupbuy_item in t_user_dict[author].watch_list['gb']:
-                        if groupbuy_item in gb_text:
-                            print(f"Alerting {author} about {groupbuy_item}")
-                            t_user_dict[author].alert_author(groupbuy_item, submission)
-            elif vendor_regex.search(title):
-                vendor_text = vendor_regex.search(title).group('title')
-                for author in t_user_dict:
-                    for vendor in t_user_dict[author].watch_list['v']:
-                        if vendor in vendor_text:
-                            print(f"Alerting {author} about {vendor} post")
-                            t_user_dict[author].alert_author(vendor, submission)
-            print(f"Finished regex search in {time.time()-t} seconds")
-
-a = InboxThread("InboxThread")
-b = WatchThread("WatchThread")
-
-b.start()
-a.start()
-
-a.join()
-b.join()
+    for submission in reddit.subreddit("mechmarket").stream.submissions(skip_existing=True):
+        subreddit_watch_proc = Process(target=analyze_submission, args=(submission, ))
+        subreddit_watch_proc.start()

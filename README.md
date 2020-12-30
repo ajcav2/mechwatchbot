@@ -10,3 +10,4 @@
 | `/gb <search_term>` | Search for posts advertising a group buy \[GB] | `/ic Artisan Spacebar` |
 | `/rm <search_term>` | Remove a search term from your watch list | `/rm Blanks` |
 | `/va` | View your current watch list | `/va` |
+| `/help` | Show available commands | `/help` |

@@ -7,7 +7,7 @@
 | `/w <search_term>` | Search for posts where people _want_ \[W] the search_term | `/w Lily58` |
 | `/v <search_term>` | Search for posts from a specific vendor \[Vendor] | `/v VintKeys` |
 | `/ic <search_term>` | Search for posts advertising an interest check \[IC] | `/ic Acrylic Case` |
-| `/gb <search_term>` | Search for posts advertising a group buy \[GB] | `/ic Artisan Spacebar` |
+| `/gb <search_term>` | Search for posts advertising a group buy \[GB] | `/gb Artisan Spacebar` |
 | `/rm <search_term>` | Remove a search term from your watch list | `/rm Blanks` |
 | `/va` | View your current watch list | `/va` |
 | `/help` | Show available commands | `/help` |

@@ -137,6 +137,8 @@ def inbox_monitor():
             this_user.get_watch_list(message)
         elif command[0:3].lower().strip() in ['/h', '/w', '/gb', '/ic', '/v']:
             new_item = command[3:].lower().strip()
+            if new_item.startswith('<') and new_item.endswith('>'):
+                new_item = new_item[1:-1]
             watch_type = command[1:3].lower().strip()
             if new_item not in user_df.loc[author][watch_type]:
                 user_df.loc[author][watch_type].append(new_item)

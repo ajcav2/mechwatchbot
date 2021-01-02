@@ -101,7 +101,7 @@ def write_df_pickle(fp, df):
 def alert_interested_users(user_df, user_column, title_text, submission):
     users = user_df.loc[[any(x in title_text for x in y) for y in user_df[user_column].tolist()]]
     for index, row in users.iterrows():
-        print(f"Alerting {user_df.loc[index].name} to {submission.title}")
+        print(f"Alerting {user_df.loc[index].name} to {submission.title}", flush=True)
         user_df.loc[index]['RedditUser'].alert_author(submission.title, submission)
 
 
@@ -113,13 +113,13 @@ def inbox_monitor():
         author = message.author.name
         command = message.body
 
-        print(f"{author}: {command}")
+        print(f"{author}: {command}", flush=True)
         if author in user_df.index.tolist():
             user_df.loc[author]['RedditUser'].update_messages(message)
         else:
             user_df.loc[author] = [RedditUser(author, message), [], [], [], [], []]
 
-        print(f"Number of users: {len(user_df)}")
+        print(f"Number of users: {len(user_df)}", flush=True)
         this_user = user_df.loc[author]['RedditUser']
         if command.lower().startswith('/help'):
             this_user.get_help(message)
@@ -156,7 +156,7 @@ def analyze_submission(submission):
     user_df = read_df_pickle(user_df_pickle)
 
     title = submission.title.lower()
-    print(f"Searching title: {submission.title}")
+    print(f"Searching title: {submission.title}", flush=True)
     t = time.time()
     if trading_regex.search(title):
         m = trading_regex.search(title)
@@ -168,7 +168,7 @@ def analyze_submission(submission):
         alert_interested_users(user_df, 'v', vendor_regex.search(title).group('title'), submission)
     elif ic_regex.search(title):
         alert_interested_users(user_df, 'ic', ic_regex.search(title).group('title'), submission)
-    print(f"Finished regex search and alerts in {round(time.time()-t, 1)} seconds")
+    print(f"Finished regex search and alerts in {round(time.time()-t, 1)} seconds", flush=True)
 
 
 if __name__ == "__main__":
@@ -185,9 +185,9 @@ if __name__ == "__main__":
                     subreddit_watch_proc = Process(target=analyze_submission, args=(submission, ))
                     subreddit_watch_proc.start()
             except praw.exceptions.RedditAPIException as e:
-                print(e)
+                print(e, flush=True)
 
     except praw.exceptions.RedditAPIException as e:
-        print(e)
+        print(e, flush=True)
     finally:
         inbox_monitor_proc.terminate()

@@ -119,6 +119,7 @@ def inbox_monitor():
         else:
             user_df.loc[author] = [RedditUser(author, message), [], [], [], [], []]
 
+        print(f"Number of users: {len(user_df)}")
         this_user = user_df.loc[author]['RedditUser']
         if command.lower().startswith('/help'):
             this_user.get_help(message)
@@ -184,4 +185,6 @@ if __name__ == "__main__":
 
         except Exception as e:
             print(e)
+
+        finally:
             inbox_monitor_proc.terminate()

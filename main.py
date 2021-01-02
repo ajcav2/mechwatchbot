@@ -172,19 +172,22 @@ def analyze_submission(submission):
 
 
 if __name__ == "__main__":
-    while True:
-        if os.path.exists(user_df_pickle+'.lock'):
-            os.remove(user_df_pickle+'.lock')
-        try:
-            inbox_monitor_proc = Process(target=inbox_monitor)
-            inbox_monitor_proc.start()
+    if os.path.exists(user_df_pickle+'.lock'):
+        os.remove(user_df_pickle+'.lock')
 
-            for submission in reddit.subreddit("mechmarket").stream.submissions(skip_existing=True):
-                subreddit_watch_proc = Process(target=analyze_submission, args=(submission, ))
-                subreddit_watch_proc.start()
+    try:
+        inbox_monitor_proc = Process(target=inbox_monitor)
+        inbox_monitor_proc.start()
 
-        except Exception as e:
-            print(e)
+        while True:
+            try:
+                for submission in reddit.subreddit("mechmarket").stream.submissions(skip_existing=True):
+                    subreddit_watch_proc = Process(target=analyze_submission, args=(submission, ))
+                    subreddit_watch_proc.start()
+            except praw.exceptions.RedditAPIException as e:
+                print(e)
 
-        finally:
-            inbox_monitor_proc.terminate()
+    except praw.exceptions.RedditAPIException as e:
+        print(e)
+    finally:
+        inbox_monitor_proc.terminate()

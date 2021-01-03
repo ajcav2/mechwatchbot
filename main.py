@@ -151,6 +151,7 @@ def inbox_monitor():
             this_user.get_watch_list(message)
         elif command[0:3].lower().strip() == '/br':
             record_bug(author, command[3:].lower().strip())
+            this_user.send_message("Thanks for your feedback!")
         else:
             this_user.get_help(message)
 

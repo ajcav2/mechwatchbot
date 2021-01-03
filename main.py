@@ -149,9 +149,16 @@ def inbox_monitor():
                 this_user.send_message(f"{new_item} already in watch list!")
             write_df_pickle(user_df_pickle, user_df)
             this_user.get_watch_list(message)
+        elif command[0:3].lower().strip() == '/bg':
+            record_bug(author, command[3:].lower().strip())
         else:
             this_user.get_help(message)
 
+
+def record_bug(author, description):
+    with open('bug_reports.txt', 'a+') as f:
+        f.write(f"{author}: {description}\r\n")
+        
 
 def analyze_submission(submission):
     user_df = read_df_pickle(user_df_pickle)

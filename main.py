@@ -64,8 +64,8 @@ class RedditUser():
                                                         '`/gb <search_term>` : : watch for group buy  \n\n'+
                                                         '`/ic <search_term>` : : watch for interest check  \n\n'+
                                                         '`/rm <search_term>` : : remove search_term from watch list  \n\n'+
-                                                        '`/va` : : view all watch list \n\n'+
-                                                        '`/br <description>` : : report a bug or suggest a feature!')
+                                                        '`/br <description>` : : report a bug or suggest a feature!\n\n'+
+                                                        '`/va` : : view all watch list')
 
 
     def alert_author(self, title, submission):

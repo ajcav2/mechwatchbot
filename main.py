@@ -100,10 +100,32 @@ def write_df_pickle(fp, df):
 
 
 def alert_interested_users(user_df, user_column, title_text, submission):
+    # filtering title
     users = user_df.loc[[any(x in title_text for x in y) for y in user_df[user_column].tolist()]]
     for index, row in users.iterrows():
-        print(f"Alerting {user_df.loc[index].name} to {submission.title}", flush=True)
-        user_df.loc[index]['RedditUser'].alert_author(submission.title, submission)
+        # filtering location
+        if user_column in ['h', 'w']:
+            if (user_df.loc[index]['l'] and '['+user_df.loc[index]['l'] in title_text.lower()) or not user_df.loc[index]['l']:
+                print(f"Alerting {user_df.loc[index].name} to {submission.title}", flush=True)
+                user_df.loc[index]['RedditUser'].alert_author(submission.title, submission)
+        else:
+            print(f"Alerting {user_df.loc[index].name} to {submission.title}", flush=True)
+            user_df.loc[index]['RedditUser'].alert_author(submission.title, submission)
+
+
+def remove_item_by_index(user_df, author, index):
+    index_counter = 0
+    this_user = user_df.loc[author]
+    types = ['h', 'w', 'ic', 'v', 'gb']
+    lengths_in_order = [len(this_user.loc[x]) for x in types]
+    length_so_far = 0
+    for i, this_length in enumerate(lengths_in_order):
+        if index < length_so_far+this_length:
+            user_df.loc[author][types[i]].pop(index-length_so_far)
+            return user_df
+        else:
+            length_so_far += this_length
+    return user_df
 
 
 def inbox_monitor():
@@ -118,7 +140,7 @@ def inbox_monitor():
         if author in user_df.index.tolist():
             user_df.loc[author]['RedditUser'].update_messages(message)
         else:
-            user_df.loc[author] = [RedditUser(author, message), [], [], [], [], []]
+            user_df.loc[author] = [RedditUser(author, message), [], [], [], [], [], []]
 
         print(f"Number of users: {len(user_df)}", flush=True)
         this_user = user_df.loc[author]['RedditUser']
@@ -128,13 +150,18 @@ def inbox_monitor():
             this_user.get_watch_list(message)
         elif command.lower().startswith('/rm'):
             rm_item = command[3:].lower().strip()
-            for c in user_df.loc[author]:
-                try:
-                    if rm_item in c:
-                        c.remove(rm_item)
-                        this_user.send_message(f"Removed {rm_item} from watchlist.")
-                except TypeError:
-                    pass
+            try:
+                index = int(rm_item)-1
+                user_df = remove_item_by_index(user_df, author, index)
+            except IndexError, ValueError:
+                for c in user_df.loc[author]:
+                    try:
+                        if rm_item in c:
+                            c.remove(rm_item)
+                            this_user.send_message(f"Removed {rm_item} from watchlist.")
+                    except TypeError:
+                        pass
+            
             write_df_pickle(user_df_pickle, user_df)
             this_user.get_watch_list(message)
         elif command[0:3].lower().strip() in ['/h', '/w', '/gb', '/ic', '/v']:
@@ -152,6 +179,9 @@ def inbox_monitor():
         elif command[0:3].lower().strip() == '/br':
             record_bug(author, command[3:].lower().strip())
             this_user.send_message("Thanks for your feedback!")
+        elif command[0:3].lower().strip() == '/l':
+            user_df.loc[author]['l'] = command[3:].lower().strip()
+            write_df_pickle(user_df_pickle, user_df)
         else:
             this_user.get_help(message)
 
@@ -198,5 +228,3 @@ if __name__ == "__main__":
 
     except praw.exceptions.RedditAPIException as e:
         print(e, flush=True)
-    finally:
-        inbox_monitor_proc.terminate()

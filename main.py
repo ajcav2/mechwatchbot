@@ -61,15 +61,15 @@ class RedditUser():
                            consider [donating](https://www.paypal.me/alexjcavanaugh). Running the server costs me $5/month \
                            on [pythonanywhere](https://www.pythonanywhere.com/pricing/) and \
                            lots of development time.\n\nThe available bot commands are as follows:  \n\n'+
-                                                        '`/h <search_term>` : : watch the _have_ section  \n\n'+
-                                                        '`/w <search_term>` : : watch the _want_ section  \n\n'+
-                                                        '`/v <search_term>` : : watch for vendor  \n\n'+
-                                                        '`/gb <search_term>` : : watch for group buy  \n\n'+
-                                                        '`/ic <search_term>` : : watch for interest check  \n\n'+
-                                                        '`/rm <search_term>` : : remove search_term from watch list  \n\n'+
-                                                        '`/rm <list_index>` : : remove this item number from watch list  \n\n'+
-                                                        '`/l <location>` : : set location for trades \n\n'+
-                                                        '`/br <description>` : : report a bug or suggest a feature!\n\n'+
+                                                        '`/h search_term` : : watch the _have_ section  \n\n'+
+                                                        '`/w search_term` : : watch the _want_ section  \n\n'+
+                                                        '`/v search_term` : : watch for vendor  \n\n'+
+                                                        '`/gb search_term` : : watch for group buy  \n\n'+
+                                                        '`/ic search_term` : : watch for interest check  \n\n'+
+                                                        '`/rm search_term` : : remove search_term from watch list  \n\n'+
+                                                        '`/rm list_index` : : remove this item number from watch list  \n\n'+
+                                                        '`/l location` : : set location for trades \n\n'+
+                                                        '`/br description` : : report a bug or suggest a feature!\n\n'+
                                                         '`/va` : : view your watch list\n\n'+
                                                         '`/unsub` : : unsubscribe from /u/mechwatchbot')
 

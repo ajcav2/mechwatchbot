@@ -57,15 +57,21 @@ class RedditUser():
                            it\'ll send you a message with a link to the post. For example, if you\'re \
                            looking for posts where people are selling "GMK alphas", you could send the \
                            bot `/h gmk alphas`. If you\'re looking to follow group buys for acrylic cases, \
-                           send the bot `/gb acrylic case`, or simply just `/gb acrylic`. The available bot commands are as follows:  \n\n'+
+                           send the bot `/gb acrylic case`, or simply just `/gb acrylic`.\n\nIf you find this bot helpful, please \
+                           consider [donating](https://www.paypal.me/alexjcavanaugh). Running the server costs me $5/month \
+                           on [pythonanywhere](https://www.pythonanywhere.com/pricing/) and \
+                           lots of development time.\n\nThe available bot commands are as follows:  \n\n'+
                                                         '`/h <search_term>` : : watch the _have_ section  \n\n'+
                                                         '`/w <search_term>` : : watch the _want_ section  \n\n'+
                                                         '`/v <search_term>` : : watch for vendor  \n\n'+
                                                         '`/gb <search_term>` : : watch for group buy  \n\n'+
                                                         '`/ic <search_term>` : : watch for interest check  \n\n'+
                                                         '`/rm <search_term>` : : remove search_term from watch list  \n\n'+
+                                                        '`/rm <list_index>` : : remove this item number from watch list  \n\n'+
+                                                        '`/l <location>` : : set location for trades \n\n'+
                                                         '`/br <description>` : : report a bug or suggest a feature!\n\n'+
-                                                        '`/va` : : view all watch list')
+                                                        '`/va` : : view your watch list\n\n'+
+                                                        '`/unsub` : : unsubscribe from /u/mechwatchbot')
 
 
     def alert_author(self, title, submission):
@@ -105,7 +111,7 @@ def alert_interested_users(user_df, user_column, title_text, submission):
     for index, row in users.iterrows():
         # filtering location
         if user_column in ['h', 'w']:
-            if (user_df.loc[index]['l'] and '['+user_df.loc[index]['l'] in title_text.lower()) or not user_df.loc[index]['l']:
+            if (user_df.loc[index]['l'] and '['+user_df.loc[index]['l'] in submission.title.lower()) or not user_df.loc[index]['l']:
                 print(f"Alerting {user_df.loc[index].name} to {submission.title}", flush=True)
                 user_df.loc[index]['RedditUser'].alert_author(submission.title, submission)
         else:
@@ -121,7 +127,8 @@ def remove_item_by_index(user_df, author, index):
     length_so_far = 0
     for i, this_length in enumerate(lengths_in_order):
         if index < length_so_far+this_length:
-            user_df.loc[author][types[i]].pop(index-length_so_far)
+            rm_item = user_df.loc[author][types[i]].pop(index-length_so_far)
+            user_df.loc[author]['RedditUser'].send_message(f"Removed {rm_item} from watchlist.")
             return user_df
         else:
             length_so_far += this_length
@@ -153,7 +160,7 @@ def inbox_monitor():
             try:
                 index = int(rm_item)-1
                 user_df = remove_item_by_index(user_df, author, index)
-            except IndexError, ValueError:
+            except (IndexError, ValueError):
                 for c in user_df.loc[author]:
                     try:
                         if rm_item in c:
@@ -164,6 +171,10 @@ def inbox_monitor():
             
             write_df_pickle(user_df_pickle, user_df)
             this_user.get_watch_list(message)
+        elif command.lower().startswith('/unsub'):
+            this_user.send_message(f"Bye, {author}! Send me another message if you want to opt back in to alerts :)")
+            user_df = user_df.drop([author])
+            write_df_pickle(user_df_pickle, user_df)
         elif command[0:3].lower().strip() in ['/h', '/w', '/gb', '/ic', '/v']:
             new_item = command[3:].lower().strip()
             if new_item.startswith('<') and new_item.endswith('>'):
@@ -180,7 +191,12 @@ def inbox_monitor():
             record_bug(author, command[3:].lower().strip())
             this_user.send_message("Thanks for your feedback!")
         elif command[0:3].lower().strip() == '/l':
-            user_df.loc[author]['l'] = command[3:].lower().strip()
+            location = command[3:].lower().strip()
+            user_df.loc[author]['l'] = location
+            if location:
+                this_user.send_message(f"Set your location to {location.upper()}. Send `/l` to unset your location filter for trades.")
+            else:
+                this_user.send_message(f"Removed location filter.")
             write_df_pickle(user_df_pickle, user_df)
         else:
             this_user.get_help(message)

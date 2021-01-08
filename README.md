@@ -3,12 +3,15 @@
 
 | Command | Description | Example |
 | ------- | ----------- | ------- |
-| `/h <search_term>` | Search for posts where people _have_ \[H] the search_term | `/h Olivia++` |
-| `/w <search_term>` | Search for posts where people _want_ \[W] the search_term | `/w Lily58` |
-| `/v <search_term>` | Search for posts from a specific vendor \[Vendor] | `/v VintKeys` |
-| `/ic <search_term>` | Search for posts advertising an interest check \[IC] | `/ic Acrylic Case` |
-| `/gb <search_term>` | Search for posts advertising a group buy \[GB] | `/gb Artisan Spacebar` |
-| `/rm <search_term>` | Remove a search term from your watch list | `/rm Blanks` |
+| `/h search_term` | Search for posts where people _have_ \[H] the search_term | `/h Olivia++` |
+| `/w search_term` | Search for posts where people _want_ \[W] the search_term | `/w Lily58` |
+| `/v search_term` | Search for posts from a specific vendor \[Vendor] | `/v VintKeys` |
+| `/ic search_term` | Search for posts advertising an interest check \[IC] | `/ic Acrylic Case` |
+| `/gb search_term` | Search for posts advertising a group buy \[GB] | `/gb Artisan Spacebar` |
+| `/rm search_term` | Remove a search term from your watch list | `/rm Blanks` |
+| `/rm list_index` | Remove watch list item by number | `/rm 3` |
+| `/l location` | Set your [location code](https://www.reddit.com/r/mechmarket/wiki/rules/rules) for trades| `/l US-IL` |
 | `/va` | View your current watch list | `/va` |
 | `/help` | Show available commands | `/help` |
-| `/br <description>` | Submit a bug or feature request | `/br Track services, too!` |
+| `/br description` | Submit a bug or feature request | `/br Track services, too!` |
+| `/unsub` | Unsubscribe from all alerts | `/unsub` |

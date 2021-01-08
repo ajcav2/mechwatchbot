@@ -194,7 +194,7 @@ def inbox_monitor():
             location = command[3:].lower().strip()
             user_df.loc[author]['l'] = location
             if location:
-                this_user.send_message(f"Set your location to {location.upper()}. Send `/l` to unset your location filter for trades.")
+                this_user.send_message(f"I set your location to {location.upper()}. Send `/l` to unset your location filter for trades.")
             else:
                 this_user.send_message(f"Removed location filter.")
             write_df_pickle(user_df_pickle, user_df)

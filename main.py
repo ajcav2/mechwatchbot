@@ -114,13 +114,16 @@ def alert_interested_users(user_df, user_column, title_text, submission):
     users = user_df.loc[[any(x in title_text for x in y) for y in user_df[user_column].tolist()]]
     for index, row in users.iterrows():
         # filtering location
-        if user_column in ['h', 'w']:
-            if (user_df.loc[index]['l'] and '['+user_df.loc[index]['l'].lower() in submission.title.lower()) or not user_df.loc[index]['l']:
+        try:
+            if user_column in ['h', 'w']:
+                if (user_df.loc[index]['l'] and '['+user_df.loc[index]['l'].lower() in submission.title.lower()) or not user_df.loc[index]['l']:
+                    print(f"Alerting {user_df.loc[index].name} to {submission.title}", flush=True)
+                    user_df.loc[index]['RedditUser'].alert_author(submission.title, submission)
+            else:
                 print(f"Alerting {user_df.loc[index].name} to {submission.title}", flush=True)
                 user_df.loc[index]['RedditUser'].alert_author(submission.title, submission)
-        else:
-            print(f"Alerting {user_df.loc[index].name} to {submission.title}", flush=True)
-            user_df.loc[index]['RedditUser'].alert_author(submission.title, submission)
+        except:
+            pass
 
 
 def remove_item_by_index(user_df, author, index):

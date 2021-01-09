@@ -48,6 +48,10 @@ class RedditUser():
         for item in this_user['gb']:
             body += str(item_counter)+'. [GB] '+item+'\n\n'
             item_counter += 1
+
+        if this_user['l']:
+            body += f"Your current location is: {this_user['l']}"
+            
         self.send_message(body)
 
 
@@ -111,7 +115,7 @@ def alert_interested_users(user_df, user_column, title_text, submission):
     for index, row in users.iterrows():
         # filtering location
         if user_column in ['h', 'w']:
-            if (user_df.loc[index]['l'] and '['+user_df.loc[index]['l'] in submission.title.lower()) or not user_df.loc[index]['l']:
+            if (user_df.loc[index]['l'] and '['+user_df.loc[index]['l'].lower() in submission.title.lower()) or not user_df.loc[index]['l']:
                 print(f"Alerting {user_df.loc[index].name} to {submission.title}", flush=True)
                 user_df.loc[index]['RedditUser'].alert_author(submission.title, submission)
         else:
@@ -147,7 +151,7 @@ def inbox_monitor():
         if author in user_df.index.tolist():
             user_df.loc[author]['RedditUser'].update_messages(message)
         else:
-            user_df.loc[author] = [RedditUser(author, message), [], [], [], [], [], []]
+            user_df.loc[author] = [RedditUser(author, message), [], [], [], [], [], None]
 
         print(f"Number of users: {len(user_df)}", flush=True)
         this_user = user_df.loc[author]['RedditUser']

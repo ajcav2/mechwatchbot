@@ -234,17 +234,13 @@ if __name__ == "__main__":
     if os.path.exists(user_df_pickle+'.lock'):
         os.remove(user_df_pickle+'.lock')
 
-    try:
-        inbox_monitor_proc = Process(target=inbox_monitor)
-        inbox_monitor_proc.start()
+    inbox_monitor_proc = Process(target=inbox_monitor)
+    inbox_monitor_proc.start()
 
-        while True:
-            try:
-                for submission in reddit.subreddit("mechmarket").stream.submissions(skip_existing=True):
-                    subreddit_watch_proc = Process(target=analyze_submission, args=(submission, ))
-                    subreddit_watch_proc.start()
-            except praw.exceptions.RedditAPIException as e:
-                print(e, flush=True)
-
-    except praw.exceptions.RedditAPIException as e:
-        print(e, flush=True)
+    while True:
+        try:
+            for submission in reddit.subreddit("mechmarket").stream.submissions(skip_existing=True):
+                subreddit_watch_proc = Process(target=analyze_submission, args=(submission, ))
+                subreddit_watch_proc.start()
+        except Exception as e:
+            print(e, flush=True)

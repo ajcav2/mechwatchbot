@@ -50,8 +50,8 @@ class RedditUser():
             item_counter += 1
 
         if this_user['l']:
-            body += f"Your current location is: {this_user['l']}"
-            
+            body += f"Your current location is: {this_user['l'].upper()}"
+
         self.send_message(body)
 
 

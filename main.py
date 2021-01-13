@@ -61,21 +61,21 @@ class RedditUser():
                            it\'ll send you a message with a link to the post. For example, if you\'re \
                            looking for posts where people are selling "GMK alphas", you could send the \
                            bot `/h gmk alphas`. If you\'re looking to follow group buys for acrylic cases, \
-                           send the bot `/gb acrylic case`, or simply just `/gb acrylic`.\n\nIf you find this bot helpful, please \
-                           consider [donating](https://www.paypal.me/alexjcavanaugh). Running the server costs me $5/month \
-                           on [pythonanywhere](https://www.pythonanywhere.com/pricing/) and \
-                           lots of development time.\n\nThe available bot commands are as follows:  \n\n'+
-                                                        '`/h search_term` : : watch the _have_ section  \n\n'+
-                                                        '`/w search_term` : : watch the _want_ section  \n\n'+
-                                                        '`/v search_term` : : watch for vendor  \n\n'+
-                                                        '`/gb search_term` : : watch for group buy  \n\n'+
-                                                        '`/ic search_term` : : watch for interest check  \n\n'+
-                                                        '`/rm search_term` : : remove search_term from watch list  \n\n'+
-                                                        '`/rm list_index` : : remove this item number from watch list  \n\n'+
-                                                        '`/l location` : : set location for trades \n\n'+
-                                                        '`/br description` : : report a bug or suggest a feature!\n\n'+
-                                                        '`/va` : : view your watch list\n\n'+
-                                                        '`/unsub` : : unsubscribe from /u/mechwatchbot')
+                           send the bot `/gb acrylic case`, or simply just `/gb acrylic`. See the table below for available commands:  \n\n'+
+                            '''Command | Description | Example
+                            -|-|-
+                            `/h search_term` | Search for posts where people _have_ \[H] the search_term | `/h Olivia++`
+                            `/w search_term` | Search for posts where people _want_ \[W] the search_term | `/w Lily58`
+                            `/v search_term` | Search for posts from a specific vendor \[Vendor] | `/v VintKeys` |
+                            `/ic search_term` | Search for posts advertising an interest check \[IC] | `/ic Acrylic Case`
+                            `/gb search_term` | Search for posts advertising a group buy \[GB] | `/gb Artisan Spacebar`
+                            `/rm search_term` | Remove a search term from your watch list | `/rm Blanks`
+                            `/rm list_index` | Remove watch list item by number | `/rm 3`
+                            `/l location` | Set your [location code](https://www.reddit.com/r/mechmarket/wiki/rules/rules) for trades| `/l US-IL`
+                            `/va` | View your current watch list | `/va`
+                            `/help` | Show available commands | `/help`
+                            `/br description` | Submit a bug or feature request | `/br Track services, too!`
+                            `/unsub` | Unsubscribe from all alerts | `/unsub`''')
 
 
     def alert_author(self, title, submission):

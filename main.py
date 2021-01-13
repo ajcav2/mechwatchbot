@@ -71,7 +71,7 @@ class RedditUser():
                             `/gb search_term` | Search for posts advertising a group buy \[GB] | `/gb Artisan Spacebar`
                             `/rm search_term` | Remove a search term from your watch list | `/rm Blanks`
                             `/rm list_index` | Remove watch list item by number | `/rm 3`
-                            `/l location` | Set your [location code](https://www.reddit.com/r/mechmarket/wiki/rules/rules) for trades| `/l US-IL`
+                            `/l location` | [location code](https://www.reddit.com/r/mechmarket/wiki/rules/rules) for trades| `/l US-IL`
                             `/va` | View your current watch list | `/va`
                             `/help` | Show available commands | `/help`
                             `/br description` | Submit a bug or feature request | `/br Track services, too!`

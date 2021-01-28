@@ -209,6 +209,8 @@ def inbox_monitor():
                     else:
                         this_user.send_message(f"Removed location filter.")
                     write_df_pickle(user_df_pickle, user_df)
+                elif command[0:3].lower().strip() == '/n':
+                    this_user.send_message(f"Number of users: {len(user_df)}")
                 else:
                     this_user.get_help(message)
         except Exception as e:

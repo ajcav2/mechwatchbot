@@ -74,10 +74,10 @@ class RedditUser():
                             `/va` | View your current watch list | `/va`
                             `/help` | Show available commands | `/help`
                             `/br description` | Submit a bug or feature request | `/br Track services, too!`
-                            `/unsub` | Unsubscribe from all alerts | `/unsub`\n\nIf you find this bot helpful, please \
-                           consider [donating](https://www.paypal.me/alexjcavanaugh). Running the server costs me $5/month \
+                            `/unsub` | Unsubscribe from all alerts | `/unsub`\n\nIf you find this bot helpful, you can support developement by \
+                           [buying me a coffee :)](https://www.buymeacoffee.com/mechwatchbot). Running the server costs me $5/month \
                            on [pythonanywhere](https://www.pythonanywhere.com/pricing/) and \
-                           lots of development time. Thanks :)''')
+                           lots of development time. Thanks!''')
 
 
     def alert_author(self, title, submission):

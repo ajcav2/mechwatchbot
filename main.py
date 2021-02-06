@@ -81,7 +81,7 @@ class RedditUser():
 
 
     def alert_author(self, title, submission):
-        self.send_message(f'One of your /r/mechmarket alerts has been trigged!\n\n{title}\n\n{submission.permalink}')
+        self.send_message(f'One of your /r/mechmarket alerts has been triggered!\n\n{title}\n\n{submission.permalink}')
 
 
     def send_message(self, body):
@@ -212,7 +212,7 @@ def inbox_monitor():
                 elif command[0:3].lower().strip() == '/n':
                     this_user.send_message(f"Number of users: {len(user_df)}")
                 else:
-                    this_user.get_help(message)
+                    this_user.send_message("Sorry, I didn't understand your command. Send `/help` to see available commands.")
         except Exception as e:
             print(e, flush=True)
 

@@ -189,6 +189,7 @@ def inbox_monitor():
                 elif command[0:3].lower().strip() in ['/h', '/w', '/gb', '/ic', '/v']:
                     new_item = command[3:].lower().strip()
                     if new_item.startswith('<') and new_item.endswith('>'):
+                        this_user.send_message("Just a heads up, you don't need the angle brackets <> around your search term. I removed them for you :)")
                         new_item = new_item[1:-1]
                     watch_type = command[1:3].lower().strip()
                     if new_item not in user_df.loc[author][watch_type]:

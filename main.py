@@ -115,12 +115,17 @@ def is_allowable_trade_location(user_df_row, submission):
 def alert_interested_users(user_df, user_column, title_text, submission):
     # filtering title
     users = user_df.loc[[any(x in title_text for x in y) for y in user_df[user_column].tolist()]]
+    indices_to_alert = []
     for index, row in users.iterrows():
         # filtering location
         if user_column in ['h', 'w', 's'] and not is_allowable_trade_location(user_df.loc[index], submission):
         	continue
+        indices_to_alert.append(index)
 
-        print(f"Alerting {user_df.loc[index].name} to {submission.title}", flush=True)
+    if indices_to_alert:
+        print(f"Alerting {', '.join([user_df.loc[index].name for index in indices_to_alert])} to {submission.title}", flush=True)
+    
+    for index in indices_to_alert:
         try:
             user_df.loc[index]['RedditUser'].alert_author(submission.title, submission)
         except:
@@ -148,80 +153,105 @@ def inbox_monitor():
             for item in reddit.inbox.stream(skip_existing=True):
                 message = reddit.inbox.message(item.id)
                 author = message.author.name
-                command = message.body
-
-                print(f"{author}: {command}", flush=True)
-                user_df = read_df_pickle(user_df_pickle)
-                if author in user_df.index.tolist():
-                    user_df.loc[author]['RedditUser'].update_messages(message)
-                else:
-                    user_df.loc[author] = [RedditUser(author, message), [], [], [], [], [], [], None]
-
-                print(f"Number of users: {len(user_df)}", flush=True)
-                this_user = user_df.loc[author]['RedditUser']
-                if command.lower().startswith('/help'):
-                    this_user.get_help(message)
-                elif command.lower().startswith('/va'):
-                    this_user.get_watch_list(message)
-                elif command.lower().startswith('/rm'):
-                    rm_item = command[3:].lower().strip()
-                    try:
-                        index = int(rm_item)-1
-                        user_df = remove_item_by_index(user_df, author, index)
-                    except (IndexError, ValueError):
-                        for c in user_df.loc[author]:
-                            try:
-                                if rm_item in c:
-                                    c.remove(rm_item)
-                                    this_user.send_message(f"Removed {rm_item} from watchlist.")
-                            except TypeError:
-                                pass
-                    
-                    write_df_pickle(user_df_pickle, user_df)
-                    this_user.get_watch_list(message)
-                elif command.lower().startswith('/unsub'):
-                    this_user.send_message(f"Bye, {author}! Send me another message if you want to opt back in to alerts :)")
-                    user_df = user_df.drop([author])
-                    write_df_pickle(user_df_pickle, user_df)
-                elif command[0:3].lower().strip() in ['/h', '/w', '/gb', '/ic', '/v', '/s']:
-                    slash_command = command[0:3].lower().strip()
-                    new_item = command[3:].lower().strip()
-                    if new_item.startswith('<') and new_item.endswith('>'):
-                        this_user.send_message("Just a heads up, you don't need the angle brackets <> around your search term. I removed them for you :)")
-                        new_item = new_item[1:-1]
-                    watch_type = command[1:3].lower().strip()
-                    if new_item not in user_df.loc[author][watch_type]:
-                        user_df.loc[author][watch_type].append(new_item)
-                        if slash_command == '/s':
-                        	this_user.send_message(f"Got it. Watching for [H] {new_item.title()} + [W] Paypal in /r/mechmarket!")
+                commands = re.sub(r'\n+', '\n', message.body).strip().split('\n')
+                
+                found_remove_command = False
+                too_many_removes = False
+                for command in commands:
+                    if command.startswith('/rm') and not found_remove_command:
+                        found_remove_command = True
+                        continue
+                    elif command.startswith('/rm') and found_remove_command:
+                        user_df = read_df_pickle(user_df_pickle)
+                        if author in user_df.index.tolist():
+                            user_df.loc[author]['RedditUser'].update_messages(message)
                         else:
-                        	this_user.send_message(f"Got it. Watching for [{watch_type.upper()}] {new_item.title()} in /r/mechmarket!")
-                    else:
-                        this_user.send_message(f"{new_item} already in watch list!")
+                            user_df.loc[author] = [RedditUser(author, message), [], [], [], [], [], [], None]
+                        print(f"Number of users: {len(user_df)}", flush=True)
+                        this_user = user_df.loc[author]['RedditUser']
+                        this_user.send_message("Sorry, I don't support multiple remove commands in a single message. Could you break them up for me?")
+                        too_many_removes = True
+                        break
+                if too_many_removes:
+                    continue
 
-                    # Dedupe /h and /s to avoid duplicate messages.
-                    if slash_command in ['/h', '/s'] and new_item in user_df.loc[author]['h'] and new_item in user_df.loc[author]['s']:
-                    	user_df.loc[author]['h' if slash_command == '/s' else 's'].remove(new_item)
-                    	this_user.send_message(f"Overriding overlapping `{'/h' if slash_command == '/s' else '/s'}` {new_item} command. \
-                            Only one of `/h` and `/s` can apply to a given item.")
-
-                    write_df_pickle(user_df_pickle, user_df)
-                    this_user.get_watch_list(message)
-                elif command[0:3].lower().strip() == '/br':
-                    record_bug(author, command[3:].lower().strip())
-                    this_user.send_message("Thanks for your feedback!")
-                elif command[0:3].lower().strip() == '/l':
-                    location = command[3:].lower().strip()
-                    user_df.loc[author]['l'] = location
-                    if location:
-                        this_user.send_message(f"I set your location to {location.upper()}. Send `/l` to unset your location filter for trades.")
+                for command in commands:
+                    print(f"{author}: {command}", flush=True)
+                    user_df = read_df_pickle(user_df_pickle)
+                    if author in user_df.index.tolist():
+                        user_df.loc[author]['RedditUser'].update_messages(message)
                     else:
-                        this_user.send_message(f"Removed location filter.")
-                    write_df_pickle(user_df_pickle, user_df)
-                elif command[0:3].lower().strip() == '/n':
-                    this_user.send_message(f"Number of users: {len(user_df)}")
-                else:
-                    this_user.send_message("Sorry, I didn't understand your command. Send `/help` to see available commands.")
+                        user_df.loc[author] = [RedditUser(author, message), [], [], [], [], [], [], None]
+
+                    print(f"Number of users: {len(user_df)}", flush=True)
+                    this_user = user_df.loc[author]['RedditUser']
+                    if command.lower().startswith('/help'):
+                        this_user.get_help(message)
+                    elif command.lower().startswith('/va'):
+                        this_user.get_watch_list(message)
+                    elif command.lower().startswith('/rm'):
+                        rm_item = command[3:].lower().strip()
+                        try:
+                            index = int(rm_item)-1
+                            user_df = remove_item_by_index(user_df, author, index)
+                        except (IndexError, ValueError):
+                            for c in user_df.loc[author]:
+                                try:
+                                    if rm_item in c:
+                                        c.remove(rm_item)
+                                        this_user.send_message(f"Removed {rm_item} from watchlist.")
+                                except TypeError:
+                                    pass
+                        
+                        write_df_pickle(user_df_pickle, user_df)
+                        this_user.get_watch_list(message)
+                    elif command.lower().startswith('/unsub'):
+                        this_user.send_message(f"Bye, {author}! Send me another message if you want to opt back in to alerts :)")
+                        user_df = user_df.drop([author])
+                        write_df_pickle(user_df_pickle, user_df)
+                    elif command[0:3].lower().strip() in ['/h', '/w', '/gb', '/ic', '/v', '/s']:
+                        slash_command = command[0:3].lower().strip()
+                        new_item = command[3:].lower().strip()
+                        if not new_item:
+                            this_user.send_message("Sorry, the body of your command cannot be empty. Reply `/help` for help.")
+                            continue
+                        if new_item.startswith('<') and new_item.endswith('>'):
+                            this_user.send_message("Just a heads up, you don't need the angle brackets <> around your search term. I removed them for you :)")
+                            new_item = new_item[1:-1]
+                        watch_type = command[1:3].lower().strip()
+                        if new_item not in user_df.loc[author][watch_type]:
+                            user_df.loc[author][watch_type].append(new_item)
+                            if slash_command == '/s':
+                                this_user.send_message(f"Got it. Watching for [H] {new_item.title()} + [W] Paypal in /r/mechmarket!")
+                            else:
+                                this_user.send_message(f"Got it. Watching for [{watch_type.upper()}] {new_item.title()} in /r/mechmarket!")
+                        else:
+                            this_user.send_message(f"{new_item} already in watch list!")
+
+                        # Dedupe /h and /s to avoid duplicate messages.
+                        if slash_command in ['/h', '/s'] and new_item in user_df.loc[author]['h'] and new_item in user_df.loc[author]['s']:
+                            user_df.loc[author]['h' if slash_command == '/s' else 's'].remove(new_item)
+                            this_user.send_message(f"Overriding overlapping `{'/h' if slash_command == '/s' else '/s'}` {new_item} command. \
+                                Only one of `/h` and `/s` can apply to a given item.")
+
+                        write_df_pickle(user_df_pickle, user_df)
+                        this_user.get_watch_list(message)
+                    elif command[0:3].lower().strip() == '/br':
+                        record_bug(author, command[3:].lower().strip())
+                        this_user.send_message("Thanks for your feedback!")
+                    elif command[0:3].lower().strip() == '/l':
+                        location = command[3:].lower().strip()
+                        user_df.loc[author]['l'] = location
+                        if location:
+                            this_user.send_message(f"I set your location to {location.upper()}. Send `/l` to unset your location filter for trades.")
+                        else:
+                            this_user.send_message(f"Removed location filter.")
+                        write_df_pickle(user_df_pickle, user_df)
+                    elif command[0:3].lower().strip() == '/n':
+                        this_user.send_message(f"Number of users: {len(user_df)}")
+
+                    else:
+                        this_user.send_message("Sorry, I didn't understand your command. Send `/help` to see available commands.")
         except Exception as e:
             print(f"Error processing inbox: {e}\n{traceback.print_exc()}\n", flush=True)
 

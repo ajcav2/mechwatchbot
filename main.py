@@ -249,6 +249,7 @@ def inbox_monitor():
                         write_df_pickle(user_df_pickle, user_df)
                     elif command[0:3].lower().strip() == '/n':
                         this_user.send_message(f"Number of users: {len(user_df)}")
+
                     else:
                         this_user.send_message("Sorry, I didn't understand your command. Send `/help` to see available commands.")
         except Exception as e:

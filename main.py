@@ -150,7 +150,7 @@ def alert_interested_users(post_type, title_text, submission):
 
 
 def parse_commands(reddit_user, msg):
-    print(f"{reddit_user.name}: {msg}", flush=True)
+    print(f"{reddit_user.name}: {msg.body}", flush=True)
 
     commands = []
     for line in re.sub(r'\n+', '\n', msg.body).strip().split('\n'):

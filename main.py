@@ -20,8 +20,85 @@ selling_regex = re.compile(r'\[h\](?P<have>.*?)\[w\].*paypal.*')
 vendor_regex = re.compile(r'\[vendor\](?P<title>.*)')
 groupbuy_regex = re.compile(r'\[gb\](?P<title>.*)')
 ic_regex = re.compile(r'\[ic\](?P<title>.*)')
+giveaway_regex = re.compile(r'\[giveaway\](?P<title>.*)')
 
-watchlist_ordered_types = ['h', 'w', 's', 'ic', 'v', 'gb']
+watchlist_ordered_types = ['h', 'w', 's', 'ic', 'v', 'gb', 'ga']
+
+
+def is_valid_command(text):
+    if text.startswith('/va') or text.startswith('/unsub') or text.startswith('/help') or text.startswith('/n') or text.startswith('/l') or text.startswith('/ga'):
+        return True
+    elif text.split()[0] in ['/h', '/w', '/s', '/v', '/l', '/br', '/gb', '/ic', '/rm'] and text[4:] and not text[4:].isspace():
+        return True
+    return False
+
+
+def get_formatted_watch_list_string(watch_type, item, item_count):
+    formatted_substring = \
+        f'[H] {item} + [W] Paypal' if watch_type == 's' else f'[{watch_type.upper()}] {item}'
+    return f'{item_count}. {formatted_substring}\n\n'
+
+
+def send_watch_list(reddit_user):
+    body = 'Your current watch list for /r/mechmarket is:\n\n'
+    item_count = 1
+    for watch_type in watchlist_ordered_types:
+        for item in reddit_user.loc[watch_type]:
+                body += get_formatted_watch_list_string(watch_type, item, item_count)
+                item_count += 1
+
+    body += f"Your current location is: {reddit_user.loc['l'].upper() if reddit_user.loc['l'] else 'Earth'}"
+    reddit.inbox.message(reddit_user.thread_id).reply(body)
+
+
+def send_alert(reddit_user, submission):
+    reddit.inbox.message(reddit_user.thread_id).reply(f'One of your /r/mechmarket alerts has been triggered!\n\n{submission.title}\n\n{submission.permalink}')
+
+
+def send_message(reddit_user, message):
+    reddit.inbox.message(reddit_user.thread_id).reply(message)
+
+
+def send_remove_message(reddit_user, removed_item):
+    reddit.inbox.message(reddit_user.thread_id).reply(f"Removed {removed_item} from watchlist.")
+
+
+def send_number_of_users(reddit_user):
+    user_df = read_df_pickle(user_df_pickle)
+    send_message(reddit_user, f"Number of users: {len(user_df)}")
+
+
+def send_help(reddit_user):
+    reddit.inbox.message(reddit_user.thread_id).reply('This bot searches post titles in the /r/mechmarket subreddit.\
+                    When the bot finds a match between your watch list and a post title, \
+                    it\'ll send you a message with a link to the post. For example, if you\'re \
+                    looking for posts where people are selling "GMK alphas", you could send the \
+                    bot `/h gmk alphas`. If you\'re looking to follow group buys for acrylic cases, \
+                    send the bot `/gb acrylic case`, or simply just `/gb acrylic`. See the table below for available commands:  \n\n'+
+                    '''Command | Description | Example
+                    -|-|-
+                    `/h search_term` | Search for posts where people _have_ \[H] the search_term. Only one of `/h` \
+                    and `/s` can apply to a given item. | `/h Olivia++`
+                    `/s search_term` | Search for posts where people _have_ \[H] the search\_term and _want_ \[W] Paypal. Only one of `/h` \
+                    and `/s` can apply to a given item. | `/s Botanical`
+                    `/w search_term` | Search for posts where people _want_ \[W] the search_term | `/w Lily58`
+                    `/v search_term` | Search for posts from a specific vendor \[Vendor] | `/v VintKeys` |
+                    `/ic search_term` | Search for posts advertising an interest check \[IC] | `/ic Acrylic Case`
+                    `/gb search_term` | Search for posts advertising a group buy \[GB] | `/gb Artisan Spacebar`
+                    `/rm search_term` | Remove a search term from your watch list | `/rm Blanks`
+                    `/rm list_index` | Remove watch list item by number | `/rm 3`
+                    `/l location` | [location code](https://www.reddit.com/r/mechmarket/wiki/rules/rules) for trades| `/l US-IL`
+                    `/va` | View your current watch list | `/va`
+                    `/help` | Show available commands | `/help`
+                    `/br description` | Submit a bug or feature request | `/br Track services, too!`
+                    `/unsub` | Unsubscribe from all alerts | `/unsub`\n\nIf you find this bot helpful, you can support development by \
+                    [buying me a coffee :)](https://www.buymeacoffee.com/mechwatchbot). Running the server costs me $5/month \
+                    on [pythonanywhere](https://www.pythonanywhere.com/pricing/) and \
+                    lots of development time. Thanks!''')
+
+
+def is_allowable_trade_location(user_df_row, submission):
+	return not user_df_row['l'] or '['+user_df_row['l'].lower() in submission.title.lower()
 
 def is_valid_command(text):
     if text.startswith('/va') or text.startswith('/unsub') or text.startswith('/help') or text.startswith('/n') or text.startswith('/l'):
@@ -127,9 +204,13 @@ def write_df_pickle(fp, df):
 
 def alert_interested_users(post_type, title_text, submission):
     user_df = read_df_pickle(user_df_pickle)
-
+    
     # Filter by items
     users = user_df.loc[[any(x in title_text for x in y) for y in user_df[post_type].tolist()]]
+
+    # Special filter for people who look at all giveaways
+    if post_type == 'ga':
+        users = pd.concat(users, user_df.loc[user_df['ga'] == ["*"]])
     users_alerted = []
     for index, row in users.iterrows():
         # Filter by location for trades and selling
@@ -162,7 +243,7 @@ def update_thread_id(author, message):
     if author in user_df.index.tolist():
         user_df.loc[author]['thread_id'] = message
     else:
-        user_df.loc[author] = [message, [], [], [], [], [], [], None]
+        user_df.loc[author] = [message, [], [], [], [], [], [], [], None]
     write_df_pickle(user_df_pickle, user_df)
 
 
@@ -227,6 +308,7 @@ def remove_item_by_index(author, index):
     # Get user row from dataframe
     user_df = read_df_pickle(user_df_pickle)
     this_user = user_df.loc[author]
+                     
     # Find the item to remove and remove it
     index_counter = 0
     length_so_far = 0
@@ -238,13 +320,17 @@ def remove_item_by_index(author, index):
             return user_df
         else:
             length_so_far += this_length
+    # If we've reached this point, the user has entered a number larger than the length
+    # of their watch list
+    send_message(this_user, "You don't have that many items in your watch list! Send `/va` to see your list.")
+    return user_df
 
     # If we've reached this point, the user has entered a number larger than the length
     # of their watch list
     send_message(this_user, "You don't have that many items in your watch list! Send `/va` to see your list.")
     return user_df
 
-                     
+
 def update_user_location(reddit_user, command):
     user_df = read_df_pickle(user_df_pickle)
     location = command[1] # TODO: Validate location
@@ -255,6 +341,17 @@ def update_user_location(reddit_user, command):
         send_message(reddit_user, f"Removed location filter.")
     write_df_pickle(user_df_pickle, user_df)
 
+
+def update_giveaways(reddit_user, command):
+    user_df = read_df_pickle(user_df_pickle)
+    if command[1] == "*":
+        user_df.loc[reddit_user.name]['ga'] = ["*"]
+        send_message(reddit_user, "Got it, I'll alert you of any giveaways I see.")
+    else:
+        user_df.loc[reddit_user.name]['ga'].append(command[1])
+        send_message(reddit_user, f"Got it, I'll alert you if I see a giveaway for {command[1]}.")
+
+    write_df_pickle(user_df_pickle, user_df)
 
 
 def record_bug(reddit_user, description):
@@ -281,6 +378,8 @@ def analyze_submission(submission):
         alert_interested_users('v', vendor_regex.search(title).group('title'), submission)
     elif ic_regex.search(title):
         alert_interested_users('ic', ic_regex.search(title).group('title'), submission)
+    elif giveaway_regex.search(title):
+        alert_interested_users('ga', ic_regex.search(title).group('title'), submission)
     print(f"Finished regex search and alerts in {round(time.time()-t, 1)} seconds", flush=True)
     
 
@@ -314,6 +413,8 @@ def inbox_monitor():
                         unsubscribe_user(this_user)
                     elif command[0] == '/n':
                         send_number_of_users(this_user)
+                    elif command[0] == '/ga':
+                        update_giveaways(this_user, command)
                     elif command[0] in ['/h', '/w', '/gb', '/ic', '/v', '/s']:
                         add_item_to_watch_list(this_user, command)
                     elif command[0] == '/rm':

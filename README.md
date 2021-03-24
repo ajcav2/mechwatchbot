@@ -8,6 +8,7 @@
 | `/v search_term` | Search for posts from a specific vendor \[Vendor] | `/v VintKeys` |
 | `/ic search_term` | Search for posts advertising an interest check \[IC] | `/ic Acrylic Case` |
 | `/gb search_term` | Search for posts advertising a group buy \[GB] | `/gb Artisan Spacebar` |
+| `/ga search_term` | Search for giveaways (Send `/ga *` to watch all giveaways) | `/ga Zilents` |
 | `/rm search_term` | Remove a search term from your watch list | `/rm Blanks` |
 | `/rm list_index` | Remove watch list item by number | `/rm 3` |
 | `/l location` | Set your [location code](https://www.reddit.com/r/mechmarket/wiki/rules/rules) for trades| `/l US-IL` |

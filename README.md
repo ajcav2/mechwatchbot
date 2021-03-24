@@ -3,7 +3,8 @@
 
 | Command | Description | Example |
 | ------- | ----------- | ------- |
-| `/h search_term` | Search for posts where people _have_ \[H] the search_term | `/h Olivia++` |
+| `/h search_term` | Search for posts where people _have_ \[H] the search_term. Only one of `/h` and `/s` can apply to a given item | `/h Olivia++` |
+| `/s search_term` | Search for posts where people _have_ \[H] the search_term and _want_ \[W] Paypal. Only one of `/h` and `/s` can apply to a given item | `/s Botanical` |
 | `/w search_term` | Search for posts where people _want_ \[W] the search_term | `/w Lily58` |
 | `/v search_term` | Search for posts from a specific vendor \[Vendor] | `/v VintKeys` |
 | `/ic search_term` | Search for posts advertising an interest check \[IC] | `/ic Acrylic Case` |

@@ -130,7 +130,7 @@ def alert_interested_users(post_type, title_text, submission):
     user_df = read_df_pickle(user_df_pickle)
 
     # Filter by items
-    users = user_df.loc[[any([re.search(r'\b'+x+r'\b', title_text) for x in y]) for y in user_df[post_type].tolist()]]
+    users = user_df.loc[[any([re.search(r'\b'+re.escape(x)+r'\b', title_text) for x in y]) for y in user_df[post_type].tolist()]]
 
     # Special filter for people who look at all giveaways
     if post_type == 'ga':

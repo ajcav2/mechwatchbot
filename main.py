@@ -39,15 +39,18 @@ def get_formatted_watch_list_string(watch_type, item, item_count):
 
 
 def send_watch_list(reddit_user):
+    user_df = read_df_pickle(user_df_pickle)
+    this_user = user_df.loc[reddit_user.name]
+
     body = 'Your current watch list for /r/mechmarket is:\n\n'
     item_count = 1
     for watch_type in watchlist_ordered_types:
-        for item in reddit_user.loc[watch_type]:
+        for item in this_user.loc[watch_type]:
                 body += get_formatted_watch_list_string(watch_type, item, item_count)
                 item_count += 1
 
-    body += f"Your current location is: {reddit_user.loc['l'].upper() if reddit_user.loc['l'] else 'Earth'}"
-    reddit.inbox.message(reddit_user.thread_id).reply(body)
+    body += f"Your current location is: {this_user.loc['l'].upper() if this_user.loc['l'] else 'Earth'}"
+    reddit.inbox.message(this_user.thread_id).reply(body)
 
 
 def send_alert(reddit_user, submission):

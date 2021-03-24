@@ -150,6 +150,8 @@ def alert_interested_users(post_type, title_text, submission):
 
 
 def parse_commands(reddit_user, msg):
+    print(f"{reddit_user.name}: {msg}", flush=True)
+
     commands = []
     for line in re.sub(r'\n+', '\n', msg.body).strip().split('\n'):
         if is_valid_command(line):
@@ -326,9 +328,7 @@ def inbox_monitor():
                     send_message(this_user, "Please separate `/rm` commands into multiple messages. Thanks!")
                     continue
 
-                for command in commands:
-                    print(f"{author}: {' '.join(command)}", flush=True)
-                    
+                for command in commands:                    
                     if command[0] == '/help':
                         send_help(this_user)
                     elif command[0] == '/va':

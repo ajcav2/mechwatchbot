@@ -3,6 +3,7 @@ import os
 import pickle
 import re
 import threading
+import traceback
 import time
 import traceback
 from multiprocessing import Process
@@ -15,12 +16,12 @@ subreddit = reddit.subreddit('mechmarket')
 user_df_pickle = 'userlist.pickle'
 
 trading_regex = re.compile(r'\[h\](?P<have>.*?)\[w\](?P<want>.*)')
+selling_regex = re.compile(r'\[h\](?P<have>.*?)\[w\].*paypal.*')
 vendor_regex = re.compile(r'\[vendor\](?P<title>.*)')
 groupbuy_regex = re.compile(r'\[gb\](?P<title>.*)')
 ic_regex = re.compile(r'\[ic\](?P<title>.*)')
 
 watchlist_ordered_types = ['h', 'w', 's', 'ic', 'v', 'gb']
-
 
 def is_valid_command(text):
     if text.startswith('/va') or text.startswith('/unsub') or text.startswith('/help') or text.startswith('/n') or text.startswith('/l'):
@@ -96,7 +97,10 @@ def send_help(reddit_user):
 
 def is_allowable_trade_location(user_df_row, submission):
 	return not user_df_row['l'] or '['+user_df_row['l'].lower() in submission.title.lower()
-
+def get_formatted_watch_list_string(watch_type, item, item_count):
+        formatted_substring = \
+            f'[H] {item} + [W] Paypal' if watch_type == 's' else f'[{watch_type.upper()}] {item}'
+        return f'{item_count}. {formatted_substring}\n\n'
 
 def lock_controlled_file(func):
     def wrap(*args, **kwargs):
@@ -119,6 +123,7 @@ def read_df_pickle(fp):
 @lock_controlled_file
 def write_df_pickle(fp, df):
     df.to_pickle(fp, protocol=pickle.HIGHEST_PROTOCOL)
+    
 
 def alert_interested_users(post_type, title_text, submission):
     user_df = read_df_pickle(user_df_pickle)
@@ -222,7 +227,6 @@ def remove_item_by_index(author, index):
     # Get user row from dataframe
     user_df = read_df_pickle(user_df_pickle)
     this_user = user_df.loc[author]
-
     # Find the item to remove and remove it
     index_counter = 0
     length_so_far = 0
@@ -240,7 +244,7 @@ def remove_item_by_index(author, index):
     send_message(this_user, "You don't have that many items in your watch list! Send `/va` to see your list.")
     return user_df
 
-
+                     
 def update_user_location(reddit_user, command):
     user_df = read_df_pickle(user_df_pickle)
     location = command[1] # TODO: Validate location
@@ -250,6 +254,7 @@ def update_user_location(reddit_user, command):
     else:
         send_message(reddit_user, f"Removed location filter.")
     write_df_pickle(user_df_pickle, user_df)
+
 
 
 def record_bug(reddit_user, description):

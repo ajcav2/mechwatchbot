@@ -305,7 +305,7 @@ def analyze_submission(submission):
     elif ic_regex.search(title):
         alert_interested_users('ic', ic_regex.search(title).group('title'), submission)
     elif giveaway_regex.search(title):
-        alert_interested_users('ga', ic_regex.search(title).group('title'), submission)
+        alert_interested_users('ga', giveaway_regex.search(title).group('title'), submission)
     print(f"Finished regex search and alerts in {round(time.time()-t, 1)} seconds", flush=True)
     
 

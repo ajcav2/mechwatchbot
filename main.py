@@ -134,7 +134,7 @@ def alert_interested_users(post_type, title_text, submission):
 
     # Special filter for people who look at all giveaways
     if post_type == 'ga':
-        users = pd.concat(users, user_df.loc[user_df['ga'] == ["*"]])
+        users = pd.concat([users, user_df.loc[[any(["*" in x for x in y]) for y in user_df['ga'].tolist()]]])
 
     users_alerted = []
     for index, row in users.iterrows():

@@ -329,7 +329,7 @@ def _compare_by_rm_index(command1, command2):
     if not rm_item_1.isdigit() and rm_item_2.isdigit():
         return 1
     if rm_item_1.isdigit() and rm_item_2.isdigit():
-        return 1 if rm_item_1 < rm_item_2 else -1
+        return 1 if int(rm_item_1) < int(rm_item_2) else -1
     return 0
 
 def inbox_monitor():

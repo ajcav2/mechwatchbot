@@ -1,3 +1,4 @@
 *.ini
 *.txt
 *.pickle
+*.pickle.lock

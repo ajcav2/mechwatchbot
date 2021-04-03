@@ -1,5 +1,6 @@
 import copy
 import os
+import functools
 import pickle
 import re
 import threading
@@ -203,7 +204,7 @@ def add_item_to_watch_list(reddit_user, command):
         user_df.loc[reddit_user.name]['h' if command[0] == '/s' else 's'].remove(new_item)
         send_message(reddit_user, f"Overriding overlapping `{'/h' if command[0] == '/s' else '/s'}` {new_item} command. \
             Only one of `/h` and `/s` can apply to a given item.")
-    
+
     write_df_pickle(user_df_pickle, user_df)
     send_watch_list(reddit_user)
 
@@ -307,7 +308,29 @@ def analyze_submission(submission):
     elif giveaway_regex.search(title):
         alert_interested_users('ga', giveaway_regex.search(title).group('title'), submission)
     print(f"Finished regex search and alerts in {round(time.time()-t, 1)} seconds", flush=True)
-    
+
+# Comparison function for ordering commands with /rm {index} commands coming
+# first in descending order by index.
+# Other commands (e.g. /h) can be in any order. This is used to support the
+# removal of multiple items in the same message.
+def _compare_by_rm_index(command1, command2):
+    if command1[0] != '/rm' and command2[0] != '/rm':
+        return 0
+    if command1[0] == '/rm' and command2[0] != '/rm':
+        return -1
+    if command1[0] != '/rm' and command2[0] == '/rm':
+        return 1
+
+    rm_item_1 = command1[1].strip()
+    rm_item_2 = command2[1].strip()
+
+    if rm_item_1.isdigit() and not rm_item_2.isdigit():
+        return -1
+    if not rm_item_1.isdigit() and rm_item_2.isdigit():
+        return 1
+    if rm_item_1.isdigit() and rm_item_2.isdigit():
+        return 1 if rm_item_1 < rm_item_2 else -1
+    return 0
 
 def inbox_monitor():
     while True:
@@ -319,16 +342,13 @@ def inbox_monitor():
                 user_df = read_df_pickle(user_df_pickle)
                 this_user = user_df.loc[author]
 
-                commands = parse_commands(this_user, message)
-                if [command[0] for command in commands].count('/rm') > 1:
-                    # TODO: Implement ability to remove multiple items at once.
-                    # Currently, indexing gets messy if the user removes an item
-                    # with a smaller index first, followed by a second index
-                    # (since they all shift after the first one is removed).
-                    send_message(this_user, "Please separate `/rm` commands into multiple messages. Thanks!")
-                    continue
+                # Parse and dedupe commands.
+                commands = list(set(parse_commands(this_user, message)))
 
-                for command in commands:                    
+                # Sort commands by /rm index to allow multiple removals.
+                commands.sort(key=functools.cmp_to_key(_compare_by_rm_index))
+
+                for command in commands:
                     if command[0] == '/help':
                         send_help(this_user)
                     elif command[0] == '/va':

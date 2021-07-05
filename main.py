@@ -51,7 +51,16 @@ def send_watch_list(reddit_user):
 
 
 def send_alert(reddit_user, submission):
-    reddit.inbox.message(reddit_user.thread_id).reply(f'One of your /r/mechmarket alerts has been triggered!\n\n{submission.title}\n\n{submission.permalink}')
+    tries_so_far = 0
+    while tries_so_far < retries:
+        try:
+            reddit.inbox.message(reddit_user.thread_id).reply(f'One of your /r/mechmarket alerts has been triggered!\n\n{submission.title}\n\n{submission.permalink}')
+            return True
+        except Exception as e:
+            print(e, flush=True)
+            time.sleep(2*tries_so_far)
+            tries_so_far += 1
+    return False
 
 
 def send_message(reddit_user, message):
@@ -84,6 +93,7 @@ def send_help(reddit_user):
                     `/v search_term` | Search for posts from a specific vendor \[Vendor] | `/v VintKeys` |
                     `/ic search_term` | Search for posts advertising an interest check \[IC] | `/ic Acrylic Case`
                     `/gb search_term` | Search for posts advertising a group buy \[GB] | `/gb Artisan Spacebar`
+                    `/ga search_term` | Search for giveaways (Send `/ga *` to watch all giveaways) | `/ga Zilents`
                     `/rm search_term` | Remove a search term from your watch list | `/rm Blanks`
                     `/rm list_index` | Remove watch list item by number | `/rm 3`
                     `/l location` | [location code](https://www.reddit.com/r/mechmarket/wiki/rules/rules) for trades| `/l US-IL`
@@ -141,8 +151,10 @@ def alert_interested_users(post_type, title_text, submission):
             users_alerted.append(row.name)
             send_alert(row, submission)
 
-    if len(users_alerted) > 0:
-        print(f"Alerting {', '.join([user for user in users_alerted])} to {submission.title}", flush=True)
+    if len(users_alerted_sucessfully) > 0:
+        print(f"Alerting {', '.join(users_alerted_sucessfully)} to {submission.title}", flush=True)
+    if len(failed_to_alert) > 0:
+        print(f"Failed to alert {', '.join(failed_to_alert)} to {submission.title}", flush=True)
 
 
 def parse_commands(reddit_user, msg):
@@ -265,7 +277,10 @@ def update_giveaways(reddit_user, command):
         user_df.loc[reddit_user.name]['ga'] = ["*"]
         send_message(reddit_user, "Got it, I'll alert you of any giveaways I see.")
     else:
-        user_df.loc[reddit_user.name]['ga'].append(command[1])
+        if "*" not in user_df.loc[reddit_user.name]['ga']:
+            user_df.loc[reddit_user.name]['ga'].append(command[1])
+        else:
+            user_df.loc[reddit_user.name]['ga'] = [command[1]]
         send_message(reddit_user, f"Got it, I'll alert you if I see a giveaway for {command[1]}.")
 
     write_df_pickle(user_df_pickle, user_df)

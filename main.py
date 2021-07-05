@@ -55,7 +55,16 @@ def send_watch_list(reddit_user):
 
 
 def send_alert(reddit_user, submission):
-    reddit.inbox.message(reddit_user.thread_id).reply(f'One of your /r/mechmarket alerts has been triggered!\n\n{submission.title}\n\n{submission.permalink}')
+    tries_so_far = 0
+    while tries_so_far < retries:
+        try:
+            reddit.inbox.message(reddit_user.thread_id).reply(f'One of your /r/mechmarket alerts has been triggered!\n\n{submission.title}\n\n{submission.permalink}')
+            return True
+        except Exception as e:
+            print(e, flush=True)
+            time.sleep(2*tries_so_far)
+            tries_so_far += 1
+    return False
 
 
 def send_message(reddit_user, message):
@@ -146,8 +155,10 @@ def alert_interested_users(post_type, title_text, submission):
             users_alerted.append(row.name)
             send_alert(row, submission)
 
-    if len(users_alerted) > 0:
-        print(f"Alerting {', '.join([user for user in users_alerted])} to {submission.title}", flush=True)
+    if len(users_alerted_sucessfully) > 0:
+        print(f"Alerting {', '.join(users_alerted_sucessfully)} to {submission.title}", flush=True)
+    if len(failed_to_alert) > 0:
+        print(f"Failed to alert {', '.join(failed_to_alert)} to {submission.title}", flush=True)
 
 
 def parse_commands(reddit_user, msg):

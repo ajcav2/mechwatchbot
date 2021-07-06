@@ -142,14 +142,14 @@ def alert_interested_users(post_type, title_text, submission):
     if post_type == 'ga':
         users = pd.concat(users, user_df.loc[user_df['ga'] == ["*"]])
 
-    users_alerted = []
+    users_alerted_sucessfully = []
+    failed_to_alert = []
     for index, row in users.iterrows():
         # Filter by location for trades and selling
         if post_type in ['h', 'w', 's'] and not is_allowable_trade_location(row, submission):
         	continue
         else:
-            users_alerted.append(row.name)
-            send_alert(row, submission)
+            users_alerted_sucessfully.append(row.name) if send_alert(row, submission) else failed_to_alert.append(row.name)
 
     if len(users_alerted_sucessfully) > 0:
         print(f"Alerting {', '.join(users_alerted_sucessfully)} to {submission.title}", flush=True)

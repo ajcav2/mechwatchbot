@@ -54,7 +54,7 @@ def send_watch_list(reddit_user):
     reddit.inbox.message(this_user.thread_id).reply(body)
 
 
-def send_alert(reddit_user, submission):
+def send_alert(reddit_user, submission, retries=5):
     tries_so_far = 0
     while tries_so_far < retries:
         try:

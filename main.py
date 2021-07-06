@@ -1,5 +1,6 @@
 import copy
 import os
+import functools
 import pickle
 import re
 import threading
@@ -39,15 +40,18 @@ def get_formatted_watch_list_string(watch_type, item, item_count):
 
 
 def send_watch_list(reddit_user):
+    user_df = read_df_pickle(user_df_pickle)
+    this_user = user_df.loc[reddit_user.name]
+
     body = 'Your current watch list for /r/mechmarket is:\n\n'
     item_count = 1
     for watch_type in watchlist_ordered_types:
-        for item in reddit_user.loc[watch_type]:
+        for item in this_user.loc[watch_type]:
                 body += get_formatted_watch_list_string(watch_type, item, item_count)
                 item_count += 1
 
-    body += f"Your current location is: {reddit_user.loc['l'].upper() if reddit_user.loc['l'] else 'Earth'}"
-    reddit.inbox.message(reddit_user.thread_id).reply(body)
+    body += f"Your current location is: {this_user.loc['l'].upper() if this_user.loc['l'] else 'Earth'}"
+    reddit.inbox.message(this_user.thread_id).reply(body)
 
 
 def send_alert(reddit_user, submission, retries=5):
@@ -136,11 +140,11 @@ def alert_interested_users(post_type, title_text, submission):
     user_df = read_df_pickle(user_df_pickle)
 
     # Filter by items
-    users = user_df.loc[[any(x in title_text for x in y) for y in user_df[post_type].tolist()]]
+    users = user_df.loc[[any([re.search(r'\b'+re.escape(x)+r'\b', title_text) for x in y]) for y in user_df[post_type].tolist()]]
 
     # Special filter for people who look at all giveaways
     if post_type == 'ga':
-        users = pd.concat(users, user_df.loc[user_df['ga'] == ["*"]])
+        users = pd.concat([users, user_df.loc[[any(["*" in x for x in y]) for y in user_df['ga'].tolist()]]])
 
     users_alerted_successfully = []
     failed_to_alert = []
@@ -158,6 +162,8 @@ def alert_interested_users(post_type, title_text, submission):
 
 
 def parse_commands(reddit_user, msg):
+    print(f"{reddit_user.name}: {msg.body}", flush=True)
+
     commands = []
     for line in re.sub(r'\n+', '\n', msg.body).strip().split('\n'):
         if is_valid_command(line):
@@ -209,7 +215,7 @@ def add_item_to_watch_list(reddit_user, command):
         user_df.loc[reddit_user.name]['h' if command[0] == '/s' else 's'].remove(new_item)
         send_message(reddit_user, f"Overriding overlapping `{'/h' if command[0] == '/s' else '/s'}` {new_item} command. \
             Only one of `/h` and `/s` can apply to a given item.")
-    
+
     write_df_pickle(user_df_pickle, user_df)
     send_watch_list(reddit_user)
 
@@ -311,9 +317,31 @@ def analyze_submission(submission):
     elif ic_regex.search(title):
         alert_interested_users('ic', ic_regex.search(title).group('title'), submission)
     elif giveaway_regex.search(title):
-        alert_interested_users('ga', ic_regex.search(title).group('title'), submission)
+        alert_interested_users('ga', giveaway_regex.search(title).group('title'), submission)
     print(f"Finished regex search and alerts in {round(time.time()-t, 1)} seconds", flush=True)
-    
+
+# Comparison function for ordering commands with /rm {index} commands coming
+# first in descending order by index.
+# Other commands (e.g. /h) can be in any order. This is used to support the
+# removal of multiple items in the same message.
+def _compare_by_rm_index(command1, command2):
+    if command1[0] != '/rm' and command2[0] != '/rm':
+        return 0
+    if command1[0] == '/rm' and command2[0] != '/rm':
+        return -1
+    if command1[0] != '/rm' and command2[0] == '/rm':
+        return 1
+
+    rm_item_1 = command1[1].strip()
+    rm_item_2 = command2[1].strip()
+
+    if rm_item_1.isdigit() and not rm_item_2.isdigit():
+        return -1
+    if not rm_item_1.isdigit() and rm_item_2.isdigit():
+        return 1
+    if rm_item_1.isdigit() and rm_item_2.isdigit():
+        return 1 if int(rm_item_1) < int(rm_item_2) else -1
+    return 0
 
 def inbox_monitor():
     while True:
@@ -325,18 +353,13 @@ def inbox_monitor():
                 user_df = read_df_pickle(user_df_pickle)
                 this_user = user_df.loc[author]
 
-                commands = parse_commands(this_user, message)
-                if [command[0] for command in commands].count('/rm') > 1:
-                    # TODO: Implement ability to remove multiple items at once.
-                    # Currently, indexing gets messy if the user removes an item
-                    # with a smaller index first, followed by a second index
-                    # (since they all shift after the first one is removed).
-                    send_message(this_user, "Please separate `/rm` commands into multiple messages. Thanks!")
-                    continue
+                # Parse and dedupe commands.
+                commands = list(set(parse_commands(this_user, message)))
+
+                # Sort commands by /rm index to allow multiple removals.
+                commands.sort(key=functools.cmp_to_key(_compare_by_rm_index))
 
                 for command in commands:
-                    print(f"{author}: {' '.join(command)}", flush=True)
-                    
                     if command[0] == '/help':
                         send_help(this_user)
                     elif command[0] == '/va':
